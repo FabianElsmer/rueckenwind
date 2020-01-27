@@ -14,7 +14,9 @@
 from __future__ import absolute_import, division, print_function, with_statement
 
 import os
+import logging
 import inspect
+import hashlib
 
 import tornado.web
 import tornado.httpserver
@@ -38,6 +40,7 @@ import rw.event
 PRE_REQUEST = rw.event.Event('httpbase.pre_request')
 POST_REQUEST = rw.event.Event('httpbase.post_request')
 
+LOG = logging.getLogger(__name__)
 
 class Application(tornado.routing.ReversibleRouter):
     def __init__(self, handler=None, root=None, extra_configs=None):
@@ -93,6 +96,7 @@ class Application(tornado.routing.ReversibleRouter):
 
     def _configure_cookie_secret(self):
         cfg = self.rw_settings['rw.http']
+        cookie_secret = None
         if 'cookie_secret' in cfg:
             if 'file' in cfg['cookie_secret']:
                 cs_path = cfg['cookie_secret']['file']
@@ -107,7 +111,14 @@ class Application(tornado.routing.ReversibleRouter):
                     open(cs_path, 'wb').write(cookie_secret)
             elif 'random' in cfg['cookie_secret'] and cfg['cookie_secret']['random']:
                 cookie_secret = os.urandom(32)
-            cfg['live_settings']['cookie_secret'] = cookie_secret
+
+            if cookie_secret:
+                cfg['live_settings']['cookie_secret'] = cookie_secret
+                cookie_secret_hash = hashlib.sha256(cookie_secret).hexdigest()
+                LOG.info('Cookie secret (SHA-256) set to: %s',
+                         cookie_secret_hash)
+            else:
+                raise ValueError('Invalid cookie secret config')
 
     def start_request(self, server_conn, request_conn):
         """Called by `tornado.httpserver.HTTPServer` to handle a request."""
