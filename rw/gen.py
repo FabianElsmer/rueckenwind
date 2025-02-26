@@ -26,6 +26,8 @@ def coroutine(func, replace_callback=True):
     From the caller's perspective, ``@gen.coroutine`` is similar to
     the combination of ``@return_future`` and ``@gen.engine``.
     """
-    re = tornado.gen._make_coroutine_wrapper(func, replace_callback=True)
-    re._rw_wrapped_function = func
-    return re
+    # TODO tornado v6: AttributeError: module 'tornado.gen' has no attribute '_make_coroutine_wrapper'
+    # re = tornado.gen._make_coroutine_wrapper(func, replace_callback=True)
+    # re._rw_wrapped_function = func
+    # return re
+    return func

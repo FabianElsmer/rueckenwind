@@ -20,7 +20,7 @@ setup(
     long_description=readme,
     author='Florian Ludwig',
     author_email='vierzigundzwei@gmail.com',
-    install_requires=['tornado>=4,<6',
+    install_requires=['tornado>=4,<7',
                       'jinja2',
                       'babel',
                       'argcomplete>=0.6.6,<1.0',
