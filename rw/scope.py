@@ -19,7 +19,8 @@ import functools
 import inspect
 import logging
 
-from tornado import stack_context
+# TODO tornado v6
+# from tornado import stack_context
 
 import rw.cfg
 from . import gen
@@ -88,11 +89,15 @@ class Scope(dict):
         raise IndexError(msg)
 
     def __call__(self):
-        return stack_context.StackContext(functools.partial(set_context, self))
+        # TODO tornado v6
+        # return stack_context.StackContext(functools.partial(set_context, self))
+        return functools.partial(set_context, self)
 
     @rw.gen.coroutine
     def run(self, target_coroutine):
-        yield stack_context.run_with_stack_context(self(), target_coroutine)
+        # TODO tornado v6
+        # yield stack_context.run_with_stack_context(self(), target_coroutine)
+        yield target_coroutine
 
 
 class SubScope(Scope):
