@@ -14,11 +14,15 @@ import rw.scope
 
 
 class StaticHandler(tornado.web.StaticFileHandler):
+    @rw.scope.inject
+    def set_cache_headers(self, settings):
+        cfg = settings.get('rw.static.caching', {})
+        headers = cfg.get('headers', [])
+        for name, value in headers:
+            self.set_header(name, value)
+
     def get(self, path, include_body=True, h=None):
-        # TODO only in development mode
-        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        self.set_header('Pragma', 'no-cache')
-        self.set_header('Expires', '0')
+        self.set_cache_headers()
         return super(StaticHandler, self).get(path, include_body)
 
     @classmethod
