@@ -1,4 +1,4 @@
-import imp
+import importlib
 
 import pkg_resources
 import rw.testing
@@ -8,7 +8,7 @@ from . import example
 
 class HTTPServerTest(rw.testing.AsyncHTTPTestCase):
     def get_app(self):
-        return rw.httpbase.Application(root=imp.reload(example).root)
+        return rw.httpbase.Application(root=importlib.reload(example).root)
 
     def check_path(self, path, response_body=None, code=200,
                    method='GET', request_body=None):

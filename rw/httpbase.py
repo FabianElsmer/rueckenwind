@@ -256,11 +256,11 @@ class RequestHandler(tornado.web.RequestHandler, dict):
 
         # only supply arguments if those are "welcome"
         if hasattr(fn, '_rw_wrapped_function'):
-            arg_spec = inspect.getargspec(fn._rw_wrapped_function)
+            arg_spec = inspect.getfullargspec(fn._rw_wrapped_function)
         else:
-            arg_spec = inspect.getargspec(fn)
+            arg_spec = inspect.getfullargspec(fn)
 
-        if arg_spec.keywords is not None:
+        if arg_spec.varkw is not None:
             # fn accepts **keywords arguments so we pass all variables
             return fn(**args)
 

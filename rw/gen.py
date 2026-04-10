@@ -26,6 +26,6 @@ def coroutine(func, replace_callback=True):
     From the caller's perspective, ``@gen.coroutine`` is similar to
     the combination of ``@return_future`` and ``@gen.engine``.
     """
-    re = tornado.gen._make_coroutine_wrapper(func, replace_callback=True)
+    re = tornado.gen.coroutine(func)
     re._rw_wrapped_function = func
     return re

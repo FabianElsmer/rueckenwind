@@ -181,7 +181,7 @@ def _generate_request_handler_proxy(handler_class, handler_args, name):
     @scope.inject
     def request_handler_wrapper(app, handler, **kwargs):
         handler = handler_class(app, handler.request, **handler_args)
-        handler._execute([], **kwargs)
+        return handler._execute([], **kwargs)
     request_handler_wrapper.__name__ = name
     request_handler_wrapper.handler_class = handler_class
     request_handler_wrapper.handler_args = handler_args
