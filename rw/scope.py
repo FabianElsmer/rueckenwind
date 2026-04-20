@@ -14,19 +14,19 @@
 from __future__ import absolute_import, division, print_function, with_statement
 
 import sys
+import contextvars
 import contextlib
 import functools
 import inspect
 import logging
 
-from tornado import stack_context
 
 import rw.cfg
 from . import gen
 
 
 NOT_PROVIDED = object()
-SCOPE_CHAIN = None
+SCOPE_CHAIN = contextvars.ContextVar('rw_scope_chain', default=())
 LOG = logging.getLogger(__name__)
 
 
@@ -46,9 +46,11 @@ class Scope(dict):
         self._provider[key] = provider
 
     @gen.coroutine
-    def activate(self, plugin):
+    def activate(self, plugin, callback=None):
         yield plugin.activate()
         self.plugins.add(plugin)
+        if callback is not None:
+            callback(None)
 
     def subscope(self, key):
         if key not in self._subscopes:
@@ -67,7 +69,7 @@ class Scope(dict):
         :return: :raise IndexError:
         """
         if scopes is None:
-            scopes = list(reversed(SCOPE_CHAIN))
+            scopes = list(reversed(SCOPE_CHAIN.get()))
         if key == 'scope':
             return self
 
@@ -88,11 +90,12 @@ class Scope(dict):
         raise IndexError(msg)
 
     def __call__(self):
-        return stack_context.StackContext(functools.partial(set_context, self))
+        return set_context(self)
 
     @rw.gen.coroutine
     def run(self, target_coroutine):
-        yield stack_context.run_with_stack_context(self(), target_coroutine)
+        with self():
+            yield target_coroutine()
 
 
 class SubScope(Scope):
@@ -123,33 +126,29 @@ class SubScopeView(object):
 
 @contextlib.contextmanager
 def set_context(scope):
-    global SCOPE_CHAIN
-    if SCOPE_CHAIN is None:
-        SCOPE_CHAIN = []
-    SCOPE_CHAIN.append(scope)
+    chain = SCOPE_CHAIN.get()
+    token = SCOPE_CHAIN.set(chain + (scope,))
     try:
         yield
     finally:
-        # TODO write unit test to get current_scope to be None
-        SCOPE_CHAIN.pop()
+        SCOPE_CHAIN.reset(token)
 
 
 def get_current_scope():
-    return SCOPE_CHAIN[-1] if SCOPE_CHAIN else None
+    chain = SCOPE_CHAIN.get()
+    return chain[-1] if chain else None
 
 
 def get(key, default=NOT_PROVIDED):
-    if not SCOPE_CHAIN:
+    chain = SCOPE_CHAIN.get()
+    if not chain:
         raise OutsideScopeError()
-    return SCOPE_CHAIN[-1].get(key, default, list(reversed(SCOPE_CHAIN)))
+    return chain[-1].get(key, default, list(reversed(chain)))
 
 
 def inject(fn):
     fn_inspect = getattr(fn, '_rw_wrapped_function', fn)
-    getargspec = inspect.getargspec
-    if sys.version_info >= (3, 0):
-        getargspec = inspect.getfullargspec
-    arg_spec = getargspec(fn_inspect)
+    arg_spec = inspect.getfullargspec(fn_inspect)
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
@@ -158,7 +157,7 @@ def inject(fn):
             missing_args = set(arg_spec.args[len(args):])
             for key in missing_args:
                 if key not in kwargs:
-                    if not SCOPE_CHAIN:
+                    if not SCOPE_CHAIN.get():
                         raise OutsideScopeError('Cannot use inject outside of scope')
                     try:
                         kwargs[key] = get(key)

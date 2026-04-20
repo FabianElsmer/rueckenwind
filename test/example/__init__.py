@@ -43,7 +43,7 @@ def hello_return(handler):
 @gen.coroutine
 def lazy(handler):
     # function can be gen.coroutines so async operations can be yielded
-    yield gen.Task(tornado.ioloop.IOLoop.current().add_timeout, time.time())
+    yield gen.sleep(0)
     handler.finish('Hello lazy rw.http')
 
 
